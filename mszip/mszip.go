@@ -74,6 +74,8 @@ func (t *msZipReader) Read(b []byte) (n int, err error) {
 			}
 			if n == 0 { // We must not return 0 bytes with no error, try reading from next reader
 				continue
+			} else {
+				return n, nil
 			}
 		}
 		return n, err
