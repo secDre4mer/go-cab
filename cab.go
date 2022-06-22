@@ -23,6 +23,11 @@ type MultiCabinetInfo struct {
 	SetIndex     uint16 // Index of this cabinet in the multi-cabinet set
 }
 
+// Helper flag for fuzzing:
+// cabextract assums that CFFILE structs are immediately after CFFOLDER, which is usually the case, but not necessary according to the specification.
+// With this flag set, we return an error if this assumption is incorrect
+var requireDirectCfFileFollow = false
+
 func Open(reader io.ReaderAt, size int64) (*Cabinet, error) {
 	fullReader := io.NewSectionReader(reader, 0, size)
 	var cab Cabinet
@@ -85,6 +90,8 @@ func Open(reader io.ReaderAt, size int64) (*Cabinet, error) {
 		return nil, err
 	}
 
+	postFolderOffset, _ := fullReader.Seek(0, io.SeekCurrent)
+
 	// Look up data entries for each folder
 	for i := range folders {
 		folder := &folders[i]
@@ -96,6 +103,12 @@ func Open(reader io.ReaderAt, size int64) (*Cabinet, error) {
 			return nil, err
 		}
 		folder.dataEntries = dataEntries
+	}
+
+	if requireDirectCfFileFollow {
+		if int64(cfHeader.FirstFileEntryOffset) != postFolderOffset {
+			return nil, errors.New("offset between CFFOLDER and CFFILE")
+		}
 	}
 
 	_, err = fullReader.Seek(int64(cfHeader.FirstFileEntryOffset), io.SeekStart)
