@@ -9,13 +9,18 @@ import (
 func New(blocks []io.ReadCloser) io.ReadCloser {
 	return &msZipReader{
 		blocks: blocks,
+		lastReadBytes: ringBuffer{
+			buf: make([]byte, 0, maxWindow),
+		},
 	}
 }
 
 type msZipReader struct {
-	currentBlock *memoryReader
-	blocks       []io.ReadCloser
-	dict         []byte
+	currentBlock  io.Reader
+	lastReadBytes ringBuffer
+
+	blocks []io.ReadCloser
+	dict   []byte
 }
 
 func checkBlockHeader(block io.Reader) error {
@@ -41,9 +46,7 @@ func (t *msZipReader) openCurrentBlock() error {
 	if err := checkBlockHeader(block); err != nil {
 		return err
 	}
-	t.currentBlock = &memoryReader{
-		Reader: flate.NewReaderDict(block, t.dict),
-	}
+	t.currentBlock = io.TeeReader(flate.NewReaderDict(block, t.dict), &t.lastReadBytes)
 	return nil
 }
 
@@ -53,7 +56,8 @@ func (t *msZipReader) closeCurrentBlock() error {
 	t.blocks = t.blocks[1:]
 
 	// Update dict, remove block from read
-	t.dict = t.currentBlock.B
+	t.dict = t.lastReadBytes.Data()
+	t.lastReadBytes.Clear()
 	t.currentBlock = nil
 
 	if err := finishedBlock.Close(); err != nil {
@@ -95,28 +99,46 @@ func (t *msZipReader) Close() (err error) {
 	return
 }
 
-// memoryReader wraps an io.Reader remembers up to 32KiB
-// of the last bytes read.
-type memoryReader struct {
-	io.Reader
-	B []byte
+const maxWindow = 1 << 15 // Maximum size of a DEFLATE window
+
+type ringBuffer struct {
+	buf         []byte
+	rotateIndex int // Index of the first byte in the buffer
 }
 
-func (mr *memoryReader) Read(b []byte) (int, error) {
-	const maxWindow = 1 << 15 // Maximum size of a DEFLATE window
-	n, err := mr.Reader.Read(b)
-
-	var readData = b[:n]
-	if len(readData) >= maxWindow {
-		if len(mr.B) != maxWindow {
-			mr.B = make([]byte, maxWindow)
-		}
-		copy(mr.B, readData[len(readData)-maxWindow:])
-	} else {
-		mr.B = append(mr.B, readData...)
-		if len(mr.B) > maxWindow {
-			mr.B = mr.B[len(mr.B)-maxWindow:]
-		}
+func (r *ringBuffer) Write(p []byte) (n int, err error) {
+	var dataLength = len(p)
+	if len(p) > cap(r.buf) {
+		// Data is larger than the buffer, only keep the last cap(r.buf) bytes
+		p = p[len(p)-cap(r.buf):]
 	}
-	return n, err
+
+	// Expand buffer if we haven't reached full capacity yet
+	if len(r.buf) < cap(r.buf) {
+		if len(r.buf)+len(p) < cap(r.buf) {
+			// Buffer has enough space to fit all data
+			r.buf = append(r.buf, p...)
+			return dataLength, nil
+		}
+		// Fit as much data as possible into the buffer, then start rotating
+		fittingData := cap(r.buf) - len(r.buf)
+		r.buf = append(r.buf, p[:fittingData]...)
+		p = p[fittingData:]
+	}
+	// Buffer is full, write the data to the buffer and rotate
+	for len(p) > 0 {
+		dataWritten := copy(r.buf[r.rotateIndex:], p)
+		p = p[dataWritten:]
+		r.rotateIndex = (r.rotateIndex + dataWritten) % len(r.buf)
+	}
+	return dataLength, nil
+}
+
+func (r *ringBuffer) Data() []byte {
+	return append(r.buf[r.rotateIndex:], r.buf[:r.rotateIndex]...)
+}
+
+func (r *ringBuffer) Clear() {
+	r.buf = r.buf[:0]
+	r.rotateIndex = 0
 }
