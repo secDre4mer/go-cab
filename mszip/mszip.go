@@ -107,7 +107,8 @@ type ringBuffer struct {
 }
 
 func (r *ringBuffer) Write(p []byte) (n int, err error) {
-	var dataLength = len(p)
+	n = len(p) // We always write all data; store the length for return value later (since we may modify p)
+
 	if len(p) > cap(r.buf) {
 		// Data is larger than the buffer, only keep the last cap(r.buf) bytes
 		p = p[len(p)-cap(r.buf):]
@@ -118,7 +119,7 @@ func (r *ringBuffer) Write(p []byte) (n int, err error) {
 		if len(r.buf)+len(p) < cap(r.buf) {
 			// Buffer has enough space to fit all data
 			r.buf = append(r.buf, p...)
-			return dataLength, nil
+			return n, nil
 		}
 		// Fit as much data as possible into the buffer, then start rotating
 		fittingData := cap(r.buf) - len(r.buf)
@@ -131,7 +132,7 @@ func (r *ringBuffer) Write(p []byte) (n int, err error) {
 		p = p[dataWritten:]
 		r.rotateIndex = (r.rotateIndex + dataWritten) % len(r.buf)
 	}
-	return dataLength, nil
+	return n, nil
 }
 
 func (r *ringBuffer) Data() []byte {

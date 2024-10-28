@@ -24,8 +24,8 @@ type MultiCabinetInfo struct {
 }
 
 // Helper flag for fuzzing:
-// cabextract assums that CFFILE structs are immediately after CFFOLDER, which is usually the case, but not necessary according to the specification.
-// With this flag set, we return an error if this assumption is incorrect
+// cabextract assumes that CFFILE structs are immediately after CFFOLDER, which is usually the case, but not necessary according to the specification.
+// With this flag set, we return an error if this assumption is incorrect.
 var requireDirectCfFileFollow = false
 
 func Open(reader io.ReaderAt, size int64) (*Cabinet, error) {
