@@ -139,6 +139,12 @@ func Open(reader io.ReaderAt, size int64) (*Cabinet, error) {
 }
 
 const (
+	folderIndexContinuedFromPrevious    = 0xFFFD
+	folderIndexContinuedToNext          = 0xFFFE
+	folderIndexContinuedPreviousAndNext = 0xFFFF
+)
+
+const (
 	previousCabinetExists = 0x0001
 	nextCabinetExists     = 0x0002
 	cabinetReserveExists  = 0x0004
