@@ -8,7 +8,7 @@ import (
 
 type persistentData struct {
 	Window     *SlidingWindow
-	R0, R1, R2 uint16
+	R0, R1, R2 uint32
 
 	IntelStarted  bool
 	IntelFileSize uint32
@@ -46,7 +46,7 @@ func readBlockHeader(stream *bitStream, data *persistentData) (io.Reader, error)
 		blockReader = &uncompressedReader{
 			Reader: stream.Internal,
 		}
-		data.R0, data.R1, data.R2 = uint16(r0), uint16(r1), uint16(r2)
+		data.R0, data.R1, data.R2 = r0, r1, r2
 		data.IntelStarted = true
 	case aligned, verbatim:
 		compressed := compressedReader{
@@ -166,7 +166,7 @@ func (c *compressedReader) ReadElement() (n int, err error) {
 	matchLength += minMatch
 
 	positionSlot := mainElement >> 3
-	var matchOffset uint16
+	var matchOffset uint32
 	switch positionSlot {
 	case 0:
 		matchOffset = c.R0
@@ -200,7 +200,7 @@ func (c *compressedReader) ReadElement() (n int, err error) {
 			}
 		default: // no verbatim bits
 		}
-		matchOffset = uint16(positionBase[positionSlot]) + uint16(verbatimBits) + alignedBits - 2
+		matchOffset = positionBase[positionSlot] + uint32(verbatimBits) + uint32(alignedBits) - 2
 		c.R0, c.R1, c.R2 = matchOffset, c.R0, c.R1
 	}
 	for matchLength > 0 {
