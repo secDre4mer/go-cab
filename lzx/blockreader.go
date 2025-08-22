@@ -10,8 +10,9 @@ type persistentData struct {
 	Window     *SlidingWindow
 	R0, R1, R2 uint32
 
-	IntelStarted  bool
-	IntelFileSize uint32
+	IntelStarted        bool
+	IntelFileSize       uint32
+	IntelCursorPosition int
 
 	ResetInterval int
 }

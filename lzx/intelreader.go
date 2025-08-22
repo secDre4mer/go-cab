@@ -10,22 +10,20 @@ type intelReader struct {
 
 	buffer []byte
 
-	cursorPosition int
-
 	*persistentData
 }
 
 func (i *intelReader) Read(b []byte) (int, error) {
 	if i.IntelFileSize == 0 || !i.IntelStarted {
 		n, err := i.Internal.Read(b)
-		i.cursorPosition += n
+		i.IntelCursorPosition += n
 		return n, err
 	}
 	bufferedBytes := copy(b, i.buffer)
 	i.buffer = i.buffer[bufferedBytes:]
 	b = b[bufferedBytes:]
 	n := bufferedBytes
-	i.cursorPosition += bufferedBytes
+	i.IntelCursorPosition += bufferedBytes
 	if len(b) == 0 {
 		return n, nil
 	}
@@ -47,10 +45,10 @@ func (i *intelReader) Read(b []byte) (int, error) {
 			}
 
 			absoluteOffset := int32(binary.LittleEndian.Uint32(callBytes))
-			if absoluteOffset >= -int32(i.cursorPosition+index) && absoluteOffset < int32(i.IntelFileSize) {
+			if absoluteOffset >= -int32(i.IntelCursorPosition+index) && absoluteOffset < int32(i.IntelFileSize) {
 				var relativeOffset int32
 				if absoluteOffset >= 0 {
-					relativeOffset = absoluteOffset - int32(i.cursorPosition+index)
+					relativeOffset = absoluteOffset - int32(i.IntelCursorPosition+index)
 				} else {
 					relativeOffset = absoluteOffset + int32(i.IntelFileSize)
 				}
@@ -62,6 +60,6 @@ func (i *intelReader) Read(b []byte) (int, error) {
 			index += 4
 		}
 	}
-	i.cursorPosition += readBytes
+	i.IntelCursorPosition += readBytes
 	return n, err
 }
