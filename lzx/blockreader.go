@@ -18,6 +18,8 @@ type persistentData struct {
 
 	MainTreeLengths      []byte
 	SecondaryTreeLengths []byte
+
+	ProcessedBytes int
 }
 
 func readBlockHeader(stream *bitStream, data *persistentData) (io.Reader, error) {
@@ -128,15 +130,13 @@ type compressedReader struct {
 
 	remainingBytes int
 
-	processedBytes int
-
 	*persistentData
 }
 
 func (c *compressedReader) Read(data []byte) (n int, err error) {
 	for n < len(data) {
 		if c.remainingBytes == 0 {
-			if c.ResetInterval > 0 && c.processedBytes%c.ResetInterval == 0 && c.processedBytes != 0 {
+			if c.ResetInterval > 0 && c.ProcessedBytes%c.ResetInterval == 0 && c.ProcessedBytes != 0 {
 				c.Reader.Align()
 			}
 			c.remainingBytes, err = c.ReadElement()
@@ -147,7 +147,7 @@ func (c *compressedReader) Read(data []byte) (n int, err error) {
 		for c.remainingBytes > 0 && n < len(data) {
 			data[n] = c.Window.Lookback(c.remainingBytes)
 			c.remainingBytes--
-			c.processedBytes++
+			c.ProcessedBytes++
 			n++
 		}
 	}
