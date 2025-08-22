@@ -133,10 +133,12 @@ type compressedReader struct {
 	*persistentData
 }
 
+const frameSize = 0x8000
+
 func (c *compressedReader) Read(data []byte) (n int, err error) {
 	for n < len(data) {
 		if c.remainingBytes == 0 {
-			if c.ResetInterval > 0 && c.ProcessedBytes%c.ResetInterval == 0 && c.ProcessedBytes != 0 {
+			if c.ProcessedBytes != 0 && ((c.ResetInterval > 0 && c.ProcessedBytes%c.ResetInterval == 0) || c.ProcessedBytes%frameSize == 0) {
 				c.Reader.Align()
 			}
 			c.remainingBytes, err = c.ReadElement()
