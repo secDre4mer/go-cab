@@ -45,8 +45,8 @@ func (b *bitStream) PeekBits(c int) (int64, error) {
 }
 
 func (b *bitStream) Align() {
-	b.cachedData = 0
-	b.cacheSize = 0
+	b.cacheSize -= b.cacheSize % 16 // Align to 16 bits
+	b.cachedData = b.cachedData & (1<<b.cacheSize - 1)
 }
 
 func (b *bitStream) BitsLeft() int {
