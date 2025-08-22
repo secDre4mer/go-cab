@@ -191,7 +191,12 @@ func (c *compressedReader) ReadElement() (n int, err error) {
 			verbatimBits int64
 			alignedBits  uint16
 		)
-		extra := extraBits[positionSlot]
+		var extra int
+		if int(positionSlot) >= len(extraBits) {
+			extra = extraBitsMax
+		} else {
+			extra = extraBits[positionSlot]
+		}
 		switch {
 		case extra >= 3 && c.alignedTree.MaxDepth > 0: // aligned bits are present
 			verbatimBits, err = c.Reader.ReadBits(extra - 3)
