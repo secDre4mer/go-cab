@@ -94,8 +94,7 @@ type interval struct {
 	last int64
 }
 
-func buildTree(stream *bitStream, size int, intervals []interval) (*Tree, error) {
-	var lengths = make([]byte, size)
+func buildTree(stream *bitStream, lengths []byte, intervals []interval) (*Tree, error) {
 	for _, interval := range intervals {
 		preTree, err := readTree(stream, 4, preTreeSize)
 		if err != nil {

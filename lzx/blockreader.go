@@ -15,6 +15,9 @@ type persistentData struct {
 	IntelCursorPosition int
 
 	ResetInterval int
+
+	MainTreeLengths      []byte
+	SecondaryTreeLengths []byte
 }
 
 func readBlockHeader(stream *bitStream, data *persistentData) (io.Reader, error) {
@@ -67,7 +70,10 @@ func readBlockHeader(stream *bitStream, data *persistentData) (io.Reader, error)
 			windowBits++
 			size = size >> 1
 		}
-		mainTree, err := buildTree(stream, mainTreeSize, []interval{{0, numChars}, {numChars, numChars + int64(positionSlots[windowBits-15])<<3}})
+		if data.MainTreeLengths == nil {
+			data.MainTreeLengths = make([]byte, mainTreeSize)
+		}
+		mainTree, err := buildTree(stream, data.MainTreeLengths, []interval{{0, numChars}, {numChars, numChars + int64(positionSlots[windowBits-15])<<3}})
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +82,10 @@ func readBlockHeader(stream *bitStream, data *persistentData) (io.Reader, error)
 			data.IntelStarted = true
 		}
 
-		lengthTree, err := buildTree(stream, secondaryNumElements, []interval{{0, secondaryNumElements}})
+		if data.SecondaryTreeLengths == nil {
+			data.SecondaryTreeLengths = make([]byte, secondaryNumElements)
+		}
+		lengthTree, err := buildTree(stream, data.SecondaryTreeLengths, []interval{{0, secondaryNumElements}})
 		if err != nil {
 			return nil, err
 		}
