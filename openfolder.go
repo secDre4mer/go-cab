@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/secDre4mer/go-cab/lzx"
+	"github.com/secDre4mer/lzx"
 	"github.com/secDre4mer/go-cab/mszip"
 )
 
