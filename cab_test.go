@@ -68,6 +68,36 @@ func TestDecompressLargeFile(t *testing.T) {
 	}
 }
 
+func TestDecompressLzx(t *testing.T) {
+	testfileData, err := os.ReadFile("testdata/lzx.cab")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cabFile, err := Open(bytes.NewReader(testfileData), int64(len(testfileData)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cabFile.Files) != 1 {
+		t.Fatal("expected 1 file, got", len(cabFile.Files))
+	}
+	for _, file := range cabFile.Files {
+		if file.Name != "yara.exe" {
+			t.Fatal(file.Name)
+		}
+		sha256Hash := sha256.New()
+		reader, err := file.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := io.Copy(sha256Hash, reader); err != nil {
+			t.Fatal(err)
+		}
+		if fmt.Sprintf("%X", sha256Hash.Sum(nil)) != "ACB2F8E42147DE389D9D5172CE97CE2782E564A01A8E9E636CF981A81D36884C" {
+			t.Fatal("hash mismatch on unpacked data")
+		}
+	}
+}
+
 func TestDecompressMultipleFiles(t *testing.T) {
 	testfileData, err := os.ReadFile("testdata/drivers.cab")
 	if err != nil {
