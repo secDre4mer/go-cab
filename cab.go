@@ -186,13 +186,6 @@ type cabinetFileFolderHeader struct {
 	// Optional: Per-Folder reserved area
 }
 
-type cabinetFileFolder struct {
-	cabinetFileFolderHeader
-	reservedData []byte
-
-	dataEntries []cabinetFileData
-}
-
 type cabinetFileEntryHeader struct {
 	UncompressedFileSize       uint32
 	UncompressedOffsetInFolder uint32

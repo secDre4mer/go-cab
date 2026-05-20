@@ -127,6 +127,9 @@ func TestDecompressMultipleFiles(t *testing.T) {
 		if expectedHash != hashline {
 			t.Fatalf("Expected %s, got: %s", expectedHash, hashline)
 		}
+		if err := reader.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
