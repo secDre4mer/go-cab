@@ -25,15 +25,22 @@ const (
 	AttributeNameUtf  = 0x80
 )
 
-func (f *File) Open() (io.Reader, error) {
-	folderReader, err := f.folder.open()
+func (f *File) Open() (io.ReadCloser, error) {
+	folderReader, err := f.folder.OpenAt(int64(f.header.UncompressedOffsetInFolder))
 	if err != nil {
 		return nil, err
 	}
-	if _, err := io.CopyN(io.Discard, folderReader, int64(f.header.UncompressedOffsetInFolder)); err != nil {
-		return nil, err
+	return limitReadCloser(folderReader, int64(f.header.UncompressedFileSize)), nil
+}
+
+func limitReadCloser(rc io.ReadCloser, limit int64) io.ReadCloser {
+	return struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: io.LimitReader(rc, limit),
+		Closer: rc,
 	}
-	return io.LimitReader(folderReader, int64(f.header.UncompressedFileSize)), nil
 }
 
 func (f *File) Stat() fs.FileInfo {
